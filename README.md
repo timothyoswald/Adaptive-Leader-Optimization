@@ -18,12 +18,6 @@ git clone https://github.com/PdIPS/CBXpy.git external/CBXpy
 git clone https://github.com/Markyqc/21-410-project external/21-410-project
 ```
 
-Replace `YOUR_USERNAME/21-410-project` with whatever remote you use. If those paths were accidentally committed earlier, drop them from the git index (safe if paths are missing):
-
-```bash
-git rm -r --cached external/CBXpy external/21-410-project 2>/dev/null || true
-```
-
 Verify layout:
 
 ```
