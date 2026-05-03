@@ -35,6 +35,8 @@ Thumbs.db
 # Experiment outputs (regenerate via experiments/*.py)
 results/
 
+# Local papers / PDFs (keep out of git)
+*.pdf
+
 # Vendored / sibling repos (clone separately; see README)
 external/CBXpy/
-external/21-410-project/

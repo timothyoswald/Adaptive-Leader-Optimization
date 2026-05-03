@@ -22,6 +22,34 @@ def softmax_consensus_point(x: np.ndarray, energies: np.ndarray, alpha: float) -
     return np.sum(w[:, None] * x, axis=0)
 
 
+def consensus_gap_trajectory(
+    history: np.ndarray, *, benchmark: Benchmark, consensus_alpha: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Returns (m_traj, gap_traj) where:
+      - m_traj has shape (T+1, d) and contains the softmax consensus point m_t
+      - gap_traj has shape (T+1,) and contains f(m_t) - f*
+    """
+    traj = np.asarray(history, dtype=float)
+    if traj.ndim != 3:
+        raise ValueError(f"history must have shape (T+1, N, d), got {traj.shape}")
+
+    batch = benchmark.objective_batch
+    fs = float(benchmark.f_star)
+
+    m_list: list[np.ndarray] = []
+    gap_list: list[float] = []
+    for t in range(traj.shape[0]):
+        xt = traj[t]
+        energies = np.asarray(batch(xt), dtype=float).reshape(-1)
+        m = softmax_consensus_point(xt, energies, consensus_alpha)
+        f_m = float(np.asarray(batch(m[None, :]), dtype=float).reshape(-1)[0])
+        m_list.append(np.asarray(m, dtype=float))
+        gap_list.append(float(f_m - fs))
+
+    return np.asarray(m_list, dtype=float), np.asarray(gap_list, dtype=float)
+
+
 def per_run_aggregate_metrics(
     history: np.ndarray,
     *,
@@ -38,23 +66,8 @@ def per_run_aggregate_metrics(
                              NaN if never (within horizon)
       best_consensus_gap — min_t (f(m_t) - f*), consensus m_t softmax with consensus_alpha
     """
-    traj = np.asarray(history, dtype=float)
-    assert traj.ndim == 3
     tol = float(gap_tol)
-    gaps_consensus = []
-
-    batch = benchmark.objective_batch
-    fs = float(benchmark.f_star)
-
-    for t in range(traj.shape[0]):
-        xt = traj[t]
-        energies = np.asarray(batch(xt), dtype=float).reshape(-1)
-
-        m = softmax_consensus_point(xt, energies, consensus_alpha)
-        f_m = float(np.asarray(batch(m[None, :]), dtype=float).reshape(-1)[0])
-        gaps_consensus.append(float(f_m - fs))
-
-    g_c = np.asarray(gaps_consensus, dtype=float)
+    _m_traj, g_c = consensus_gap_trajectory(history, benchmark=benchmark, consensus_alpha=consensus_alpha)
 
     success = float(np.nanmin(g_c) <= tol) if np.all(np.isfinite(g_c)) else 0.0
 

@@ -20,11 +20,10 @@ _REPO_ROOT = _Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from external.__21_410_import import ParticleConfig, simulate_particles
+from alo.algorithm import ParticleConfig, simulate_particles
 from experiments.benchmarks import ackley as ackley_fun
-from external.__21_410_import import simulate_particles as _  # noqa: F401  # ensure shim path
-from test_fun import beale as beale_fun  # type: ignore
-from test_fun import himmelblau as himmelblau_fun  # type: ignore
+from alo.test_fun import beale as beale_fun
+from alo.test_fun import himmelblau as himmelblau_fun
 
 
 @dataclass(frozen=True)

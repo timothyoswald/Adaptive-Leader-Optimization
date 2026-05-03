@@ -28,12 +28,18 @@ def _objective_3d(objective_batch):
 
 def _component_wise_brownian_noise(dyn) -> np.ndarray:
     """
-    CBXpy's string mode ``anisotropic`` scales noise by the drift per component.
-    For comparisons with ALO-style anisotropic diffusion, use independent
-    :math:`\\sqrt{dt}\\,\\mathcal{N}(0,I)` increments per coordinate (component-wise Brownian).
+    Component-wise multiplicative noise using the diagonal of the drift.
+
+    Let d = x - c be the drift (particle minus consensus). This returns
+
+        n = sqrt(dt) * diag(d) * z  ==  sqrt(dt) * (d ⊙ z),
+
+    where z ~ N(0, I) i.i.d. per coordinate.
+
+    Note: CBXpy's built-in string mode ``anisotropic`` uses a different scaling; we override it here.
     """
     z = dyn.sampler(size=dyn.drift.shape)
-    return np.sqrt(float(dyn.dt)) * z
+    return np.sqrt(float(dyn.dt)) * (np.asarray(dyn.drift, dtype=float) * np.asarray(z, dtype=float))
 
 
 def run_cbx_cbo(

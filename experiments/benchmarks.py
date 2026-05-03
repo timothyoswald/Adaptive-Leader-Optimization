@@ -7,10 +7,7 @@ import numpy as np
 
 from common.interface import Benchmark, bounds_for_benchmark
 
-# Load ALO shim first so `external/21-410-project` is on sys.path for `test_fun`.
-import external.__21_410_import as _alo_shim  # noqa: F401
-
-from test_fun import beale, himmelblau, rastrigin, rosenbrock  # type: ignore
+from alo.test_fun import beale, himmelblau, rastrigin, rosenbrock
 
 
 BatchObjective = Callable[[np.ndarray], np.ndarray]

@@ -4,8 +4,8 @@ import numpy as np
 
 from common.interface import Benchmark, NoiseModel, RunMetrics, guardrail_diagnostics
 
-# Custom optimizer implementation.
-from external.__21_410_import import ParticleConfig, simulate_particles  # type: ignore[import-not-found]
+# ALO optimizer implementation (vendored into this repo).
+from alo.algorithm import ParticleConfig, simulate_particles
 
 
 def _leader_best_so_far(

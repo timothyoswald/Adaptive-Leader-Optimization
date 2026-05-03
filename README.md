@@ -1,37 +1,13 @@
 # Optimizer comparison (ALO vs CBO)
 
-This repository compares a **particle-based adaptive leader optimizer (ALO)**—implemented in **`external/21-410-project`** (you clone it separately)—against **consensus-based optimization (CBO)** from **CBXpy** in **`external/CBXpy`**. Experiments live under `experiments/`; shared types and runners are in `common/`.
+This repository compares a **particle-based adaptive leader optimizer (ALO)** (included here under **`alo/`**) against **consensus-based optimization (CBO)** from **CBXpy** (cloned into **`external/CBXpy`**). Experiments live under `experiments/`; shared types and runners are in `common/`.
 
-Those two directories are **not** part of this repo (see **`.gitignore`**); clone them after checkout.
+## External dependency (clone first)
 
-## External dependencies (clone first)
-
-From the **repository root**, create the two checkouts with **exact** folder names (the import shims depend on them):
+From the **repository root**, clone CBXpy into the expected path:
 
 ```bash
 git clone https://github.com/PdIPS/CBXpy.git external/CBXpy
-```
-
-**ALO project:** the course/companion repository that provides `algorithm.py`, `test_fun.py`, etc. Clone it **into `external/21-410-project`** (rename the cloned folder if the remote repo name differs). Example:
-
-```bash
-git clone https://github.com/Markyqc/21-410-project external/21-410-project
-```
-
-Replace `YOUR_USERNAME/21-410-project` with whatever remote you use. If those paths were accidentally committed earlier, drop them from the git index (safe if paths are missing):
-
-```bash
-git rm -r --cached external/CBXpy external/21-410-project 2>/dev/null || true
-```
-
-Verify layout:
-
-```
-external/
-  __init__.py
-  __21_410_import.py
-  CBXpy/               # cloned
-  21-410-project/      # cloned
 ```
 
 ## Prerequisites
@@ -50,11 +26,10 @@ Nothing needs to be `pip install`’d from `external/CBXpy`; the runners prepend
 | Path | Role |
 |------|------|
 | `main.py` | Adds the repo root to `sys.path` so imports work consistently (same pattern as scripts under `experiments/`). |
+| `alo/` | ALO implementation: `algorithm.py` (simulator) and `test_fun.py` (benchmarks). |
 | `common/` | `Benchmark` types, diagnostics, **`custom_runner`** (ALO → `simulate_particles`), **`cbx_runner`** (CBO via CBXpy), **`consensus_metrics`** (softmax consensus statistics). |
 | `experiments/` | CLI scripts for suites, sweeps, tables, animations. **`benchmarks.py`** defines `suite_2d()` / `suite_nd()` using objectives from `test_fun.py`. |
-| `external/__21_410_import.py` | Shim: puts `external/21-410-project` on `sys.path` and re-exports `ParticleConfig`, `simulate_particles`. |
 | `external/CBXpy/` | **Git clone** ([PdIPS/CBXpy](https://github.com/PdIPS/CBXpy)); CBO dynamics. Ignored by this repo’s git. |
-| `external/21-410-project/` | **Git clone** of the ALO code; **`algorithm.py`**, **`test_fun.py`**. Ignored by this repo’s git. |
 
 Benchmark functions (Beale, Himmelblau, Rastrigin, Rosenbrock in 2D, etc.), bounds, and `f★` wiring are centralized in **`experiments/benchmarks.py`**.
 
@@ -131,4 +106,4 @@ So “anisotropic CBO” in this codebase means **component-wise Brownian increm
 python -c "from common.custom_runner import run_custom; from common.cbx_runner import run_cbx_cbo; print('ok')"
 ```
 
-If that fails, ensure you are at the repo root and that `external/21-410-project` and `external/CBXpy` are present.
+If that fails, ensure you are at the repo root and that `external/CBXpy` is present.
