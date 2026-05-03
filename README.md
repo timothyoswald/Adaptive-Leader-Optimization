@@ -10,6 +10,8 @@ From the **repository root**, clone CBXpy into the expected path:
 git clone https://github.com/PdIPS/CBXpy.git external/CBXpy
 ```
 
+ALO is included under **`alo/`**; you do not need a separate clone of the course project.
+
 ## Prerequisites
 
 - **Python** 3.10+ recommended (code uses modern typing syntax).
@@ -28,7 +30,7 @@ Nothing needs to be `pip install`’d from `external/CBXpy`; the runners prepend
 | `main.py` | Adds the repo root to `sys.path` so imports work consistently (same pattern as scripts under `experiments/`). |
 | `alo/` | ALO implementation: `algorithm.py` (simulator) and `test_fun.py` (benchmarks). |
 | `common/` | `Benchmark` types, diagnostics, **`custom_runner`** (ALO → `simulate_particles`), **`cbx_runner`** (CBO via CBXpy), **`consensus_metrics`** (softmax consensus statistics). |
-| `experiments/` | CLI scripts for suites, sweeps, tables, animations. **`benchmarks.py`** defines `suite_2d()` / `suite_nd()` using objectives from `test_fun.py`. |
+| `experiments/` | CLI scripts for suites, sweeps, tables, animations. **`benchmarks.py`** defines `suite_2d()` / `suite_nd()` using objectives from **`alo/test_fun.py`**. |
 | `external/CBXpy/` | **Git clone** ([PdIPS/CBXpy](https://github.com/PdIPS/CBXpy)); CBO dynamics. Ignored by this repo’s git. |
 
 Benchmark functions (Beale, Himmelblau, Rastrigin, Rosenbrock in 2D, etc.), bounds, and `f★` wiring are centralized in **`experiments/benchmarks.py`**.
