@@ -1,0 +1,4 @@
+# Optimizer comparison harness + vendored CBXpy stack
+numpy>=1.21
+scipy>=1.7
+matplotlib>=3.5
