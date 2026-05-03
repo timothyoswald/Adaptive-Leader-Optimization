@@ -63,13 +63,17 @@ def _l2_to_nearest_minimizer(x: np.ndarray, mins: list[np.ndarray]) -> float:
     return float(min(np.linalg.norm(xx - m.reshape(-1)) for m in mins))
 
 
-def _particle_variance_over_time(traj: np.ndarray) -> np.ndarray:
+def _mean_sq_spread_about_centroid(traj: np.ndarray) -> np.ndarray:
     """
-    traj: (T+1, N, d). Returns variance time series shape (T+1,).
-    Variance definition: mean over coordinates of Var_i[x_{i,j}].
+    traj: (T+1, N, d). Returns shape (T+1,).
+
+    At each time t: centroid bar{x}_t = (1/N) sum_i x_{t,i},
+    then S_t = (1/N) sum_i ||x_{t,i} - bar{x}_t||_2^2 (mean squared distance to centroid).
     """
     arr = np.asarray(traj, dtype=float)
-    return np.mean(np.var(arr, axis=1, ddof=0), axis=1)
+    c = np.mean(arr, axis=1, keepdims=True)
+    diff = arr - c
+    return np.mean(np.sum(diff * diff, axis=-1), axis=-1)
 
 
 def _one_run_packed(args: tuple[Any, ...]) -> tuple[str, str, NoiseModel, int, float, float, float, float, np.ndarray]:
@@ -127,7 +131,7 @@ def _one_run_packed(args: tuple[Any, ...]) -> tuple[str, str, NoiseModel, int, f
     m_traj, _gaps = consensus_gap_trajectory(traj, benchmark=bench, consensus_alpha=float(cfg["consensus_alpha"]))
     final_consensus = np.asarray(m_traj[-1], dtype=float)
     final_dist = _l2_to_nearest_minimizer(final_consensus, _global_minimizers(bench.name))
-    var_t = _particle_variance_over_time(traj)
+    spread_t = _mean_sq_spread_about_centroid(traj)
     return (
         benchmark_name,
         algo,
@@ -137,7 +141,7 @@ def _one_run_packed(args: tuple[Any, ...]) -> tuple[str, str, NoiseModel, int, f
         mets["first_consensus_step"],
         mets["best_consensus_gap"],
         float(final_dist),
-        np.asarray(var_t, dtype=float),
+        np.asarray(spread_t, dtype=float),
     )
 
 
@@ -184,7 +188,12 @@ def main() -> None:
     p.add_argument("--workers", type=int, default=max(1, (mp.cpu_count() or 4) - 1))
     p.add_argument("--out-md", type=str, default="results/four_algorithms_2d_summary.md")
     p.add_argument("--out-csv", type=str, default="results/four_algorithms_2d_runs.csv")
-    p.add_argument("--out-variance-plot", type=str, default="results/particle_variance_over_time.png")
+    p.add_argument(
+        "--out-variance-plot",
+        type=str,
+        default="results/centroid_mean_sq_spread_over_time.png",
+        help="Stem for per-benchmark spread plots: <stem>_<benchmark>_spread.png",
+    )
     args = p.parse_args()
 
     cfg: dict[str, Any] = {
@@ -226,24 +235,24 @@ def main() -> None:
             rows = pool.map(_one_run_packed, tasks, chunksize=4)
 
     groups: dict[tuple[str, str], list[tuple[float, float, float, float]]] = {}
-    var_sums: dict[tuple[str, str], np.ndarray] = {}
-    var_counts: dict[tuple[str, str], int] = {}
+    spread_sums: dict[tuple[str, str], np.ndarray] = {}
+    spread_counts: dict[tuple[str, str], int] = {}
     csv_lines: list[str] = []
 
     csv_lines.append("benchmark,method,noise,repeat,success,first_consensus_step,best_consensus_gap,final_consensus_dist")
     for tup in rows:
-        bname, algo, nk, repeat_idx, sr, fs, bg, fd, var_t = tup
+        bname, algo, nk, repeat_idx, sr, fs, bg, fd, spread_t = tup
         key = (bname, _method_label(algo, nk))
         groups.setdefault(key, []).append((sr, fs, bg, fd))
         csv_lines.append(f"{bname},{_method_label(algo, nk)},{nk},{repeat_idx},{sr},{fs},{bg},{fd}")
 
         kk = (bname, _method_label(algo, nk))
-        vt = np.asarray(var_t, dtype=float)
-        if kk not in var_sums:
-            var_sums[kk] = np.zeros_like(vt)
-            var_counts[kk] = 0
-        var_sums[kk] += vt
-        var_counts[kk] += 1
+        st = np.asarray(spread_t, dtype=float)
+        if kk not in spread_sums:
+            spread_sums[kk] = np.zeros_like(st)
+            spread_counts[kk] = 0
+        spread_sums[kk] += st
+        spread_counts[kk] += 1
 
     agg = _aggregate(groups)
 
@@ -288,7 +297,7 @@ def main() -> None:
     with out_md.open("w", encoding="utf-8") as fh:
         fh.write("\n".join(lines))
 
-    # Variance plots (four separate figures, one per benchmark; 4 curves each).
+    # Mean squared spread about centroid (four separate figures, one per benchmark; 4 curves each).
     import matplotlib
 
     matplotlib.use("Agg")
@@ -309,19 +318,19 @@ def main() -> None:
 
     for b in benchmarks:
         fig, ax = plt.subplots(1, 1, figsize=(8.6, 5.3), constrained_layout=True)
-        ax.set_title(f"{b.name.capitalize()} — particle variance over time")
+        ax.set_title(f"{b.name.capitalize()} — mean squared spread about centroid")
         for meth in method_order:
             kk = (b.name, meth)
-            mean_var = var_sums[kk] / max(1, var_counts[kk])
-            ax.plot(t, mean_var, label=meth, color=colors[meth], linewidth=1.8)
+            mean_spread = spread_sums[kk] / max(1, spread_counts[kk])
+            ax.plot(t, mean_spread, label=meth, color=colors[meth], linewidth=1.8)
         ax.grid(True, alpha=0.35)
         ax.set_yscale("log")
-        ax.set_ylabel("mean particle variance (log scale)")
+        ax.set_ylabel(r"$\frac{1}{N}\sum_i\|x_i-\bar{x}\|_2^2$ (mean over runs, log scale)")
         ax.set_xlabel("iteration")
         # Put the color labels inside each plot.
         ax.legend(loc="best", frameon=True, fontsize=9)
 
-        plot_path = out_dir / f"{prefix}_{b.name.lower()}_variance.png"
+        plot_path = out_dir / f"{prefix}_{b.name.lower()}_spread.png"
         fig.savefig(plot_path, dpi=170)
         plt.close(fig)
 
